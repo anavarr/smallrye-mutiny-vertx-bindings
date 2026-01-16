@@ -538,8 +538,13 @@ public class PlainMethodShimModule implements ShimModule {
                                     String.join(", ", getParameters().stream().map(p -> "_" + p.name()).toList()));
                             code.addStatement("return this");
                         } else {
-                            code.addStatement("return getDelegate().$L($L)", getName(),
-                                    String.join(", ", getParameters().stream().map(p -> "_" + p.name()).toList()));
+                            String arg = String.join(", ",
+                                    getParameters().stream().map(p -> "_" + p.name()).toList());
+//                            if (TypeUtils.mustTransformFutureIntoUni(getParameters(), getOriginalMethod().getParameters())) {
+//                                arg = String.format("io.smallrye.mutiny.vertx.UniHelper.toFuture(%s)",
+//                                        getParameters().get(0).name());
+//                            }
+                            code.addStatement("return getDelegate().$L($L)", getName(), arg);
                         }
                     }
                 }
