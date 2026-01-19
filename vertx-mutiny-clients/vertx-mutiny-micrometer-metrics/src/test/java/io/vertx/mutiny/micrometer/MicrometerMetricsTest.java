@@ -2,14 +2,15 @@ package io.vertx.mutiny.micrometer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.micrometer.MicrometerMetricsOptions;
+import io.vertx.micrometer.PrometheusScrapingHandler;
 import io.vertx.micrometer.VertxPrometheusOptions;
 import io.vertx.mutiny.core.Vertx;
 import io.vertx.mutiny.core.http.HttpServer;
@@ -18,15 +19,15 @@ import io.vertx.mutiny.ext.web.client.WebClient;
 
 public class MicrometerMetricsTest {
 
-    private Vertx vertx;
+    static private Vertx vertx;
 
-    @Before
-    public void setUp() {
+    @BeforeAll
+    public static void setUp() {
         vertx = Vertx.vertx();
     }
 
-    @After
-    public void tearDown() {
+    @AfterAll
+    public static void tearDown() {
         vertx.closeAndAwait();
     }
 
