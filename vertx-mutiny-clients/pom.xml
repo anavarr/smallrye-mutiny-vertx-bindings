@@ -52,9 +52,9 @@
                         <module>vertx-mutiny-health-checks</module>
                         <module>vertx-mutiny-json-schema</module>
                         <module>vertx-mutiny-web-validation</module>
-        <!--                <module>vertx-mutiny-web-openapi</module>-->
+                        <module>vertx-mutiny-openapi</module>
+<!--                        <module>vertx-mutiny-web-openapi-router</module>-->
                         <module>vertx-mutiny-web-api-service</module>
-        <!--                <module>vertx-mutiny-web-api-contract</module>-->
                         <module>vertx-mutiny-web-templ-freemarker</module>
                         <module>vertx-mutiny-web-templ-handlebars</module>
                         <module>vertx-mutiny-web-templ-httl</module>
