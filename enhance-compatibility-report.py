@@ -524,6 +524,8 @@ def categorize_row(html_row, non_vertxgen_types, jar_index, method_cache, vertxg
             code_m = re.search(r'<code>(.*?)</code>', html_row)
             if code_m and code_m.group(1) == 'null':
                 return 'revapi-noise'
+        if 'not found in the supplied archives' in desc_text:
+            return 'revapi-noise'
     return 'codegen'
 
 
@@ -533,7 +535,7 @@ FILTER_PANEL = """\
 <div id="compat-filters" style="position:sticky;top:0;z-index:100;background:#f4f6f9;border:1px solid #d0d7de;border-radius:0 0 6px 6px;padding:14px 20px;margin-bottom:20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
 <strong>Filters</strong>
-<span style="font-size:12px"><a href="#" id="select-all" style="color:#0969da;text-decoration:none">show all</a> · <a href="#" id="select-none" style="color:#0969da;text-decoration:none">hide all</a></span>
+<span style="font-size:12px"><a href="#" id="select-all" style="color:#0969da;text-decoration:none">show all</a> · <a href="#" id="select-none" style="color:#0969da;text-decoration:none">hide all</a> · <a href="#" id="expand-all" style="color:#0969da;text-decoration:none">expand sections</a> · <a href="#" id="collapse-all" style="color:#0969da;text-decoration:none">collapse sections</a></span>
 </div>
 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0">
 <input type="checkbox" id="filter-type-specialization" style="width:15px;height:15px">
@@ -620,6 +622,32 @@ SCRIPT = """\
   }
   document.getElementById('select-all').addEventListener('click', function(e) { e.preventDefault(); setAll(true); });
   document.getElementById('select-none').addEventListener('click', function(e) { e.preventDefault(); setAll(false); });
+  document.getElementById('expand-all').addEventListener('click', function(e) {
+    e.preventDefault();
+    document.querySelectorAll('.sect1 details').forEach(function(d) { d.open = true; });
+  });
+  document.getElementById('collapse-all').addEventListener('click', function(e) {
+    e.preventDefault();
+    document.querySelectorAll('.sect1 details').forEach(function(d) { d.open = false; });
+  });
+
+  // Make sections collapsible
+  document.querySelectorAll('.sect1').forEach(function(sect) {
+    var h2 = sect.querySelector('h2');
+    var body = sect.querySelector('.sectionbody');
+    if (!h2 || !body) return;
+    var details = document.createElement('details');
+    details.open = true;
+    details.style.cssText = 'margin-bottom:0';
+    var summary = document.createElement('summary');
+    summary.style.cssText = 'cursor:pointer;list-style:none;padding:0';
+    summary.innerHTML = h2.outerHTML;
+    summary.querySelector('h2').style.marginTop = '0';
+    details.appendChild(summary);
+    details.appendChild(body);
+    sect.innerHTML = '';
+    sect.appendChild(details);
+  });
 
   update();
 })();
