@@ -531,6 +531,26 @@ def categorize_row(html_row, non_vertxgen_types, jar_index, method_cache, vertxg
 
 # --- HTML injection ---
 
+CUSTOM_CSS = """\
+<style>
+body { max-width: 100%; padding: 0 20px; }
+#content { max-width: 1600px; margin: 0 auto; }
+table.tableblock { table-layout: fixed; width: 100%; }
+table.tableblock col:nth-child(1) { width: 42% !important; }
+table.tableblock col:nth-child(2) { width: 14% !important; }
+table.tableblock col:nth-child(3) { width: 10% !important; }
+table.tableblock col:nth-child(4) { width: 34% !important; }
+table.tableblock td { word-wrap: break-word; overflow-wrap: break-word; vertical-align: top; padding: 6px 8px; font-size: 0.85em; }
+table.tableblock td:first-child code { font-size: 0.82em; word-break: break-all; }
+table.tableblock td p.tableblock { margin: 0; }
+table.tableblock td .ulist ul { margin: 0; padding-left: 1.2em; }
+table.tableblock td .ulist li p { margin: 0; }
+.sect1 { margin-bottom: 1em; }
+.sect1 .sectionbody { overflow-x: auto; }
+details summary h2 { display: inline; }
+</style>
+"""
+
 FILTER_PANEL = """\
 <div id="compat-filters" style="position:sticky;top:0;z-index:100;background:#f4f6f9;border:1px solid #d0d7de;border-radius:0 0 6px 6px;padding:14px 20px;margin-bottom:20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -567,6 +587,25 @@ FILTER_PANEL = """\
 <span id="count-revapi-noise" style="background:#e2e3e5;color:#495057;border-radius:10px;padding:1px 8px;font-size:12px;font-weight:600">0</span>
 <span style="color:#666;font-size:12px;margin-left:4px">(null elements, unresolvable entries)</span>
 </label>
+<hr style="margin:10px 0;border:none;border-top:1px solid #d0d7de">
+<div style="display:flex;gap:24px;flex-wrap:wrap">
+<div>
+<strong style="font-size:12px;color:#555">Source compatibility</strong>
+<div style="display:flex;gap:10px;margin-top:4px">
+<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="clf-source" value="BREAKING" checked style="width:13px;height:13px"><span style="color:#cf222e;font-weight:600">Breaking</span></label>
+<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="clf-source" value="POTENTIALLY_BREAKING" checked style="width:13px;height:13px"><span style="color:#bf8700;font-weight:600">Potentially</span></label>
+<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="clf-source" value="NON_BREAKING" checked style="width:13px;height:13px"><span style="color:#1a7f37">Non-breaking</span></label>
+</div>
+</div>
+<div>
+<strong style="font-size:12px;color:#555">Binary compatibility</strong>
+<div style="display:flex;gap:10px;margin-top:4px">
+<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="clf-binary" value="BREAKING" checked style="width:13px;height:13px"><span style="color:#cf222e;font-weight:600">Breaking</span></label>
+<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="clf-binary" value="POTENTIALLY_BREAKING" checked style="width:13px;height:13px"><span style="color:#bf8700;font-weight:600">Potentially</span></label>
+<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" class="clf-binary" value="NON_BREAKING" checked style="width:13px;height:13px"><span style="color:#1a7f37">Non-breaking</span></label>
+</div>
+</div>
+</div>
 </div>
 """
 
@@ -583,14 +622,28 @@ SCRIPT = """\
     if (rows.length === 0) cb.closest('label').style.display = 'none';
   });
 
+  var sourceCbs = document.querySelectorAll('.clf-source');
+  var binaryCbs = document.querySelectorAll('.clf-binary');
+
+  function getCheckedValues(cbs) {
+    var vals = {};
+    cbs.forEach(function(cb) { if (cb.checked) vals[cb.value] = true; });
+    return vals;
+  }
+
   function update() {
-    categories.forEach(function(cat) {
-      var cb = document.getElementById('filter-' + cat);
-      var show = cb.checked;
-      document.querySelectorAll('tr[data-category="' + cat + '"]').forEach(function(row) {
-        row.style.display = show ? '' : 'none';
-      });
+    var srcVals = getCheckedValues(sourceCbs);
+    var binVals = getCheckedValues(binaryCbs);
+
+    document.querySelectorAll('tbody tr[data-category]').forEach(function(row) {
+      var cat = row.getAttribute('data-category');
+      var catCb = document.getElementById('filter-' + cat);
+      var catOk = catCb && catCb.checked;
+      var srcOk = srcVals[row.getAttribute('data-source')] || false;
+      var binOk = binVals[row.getAttribute('data-binary')] || false;
+      row.style.display = (catOk && srcOk && binOk) ? '' : 'none';
     });
+
     document.querySelectorAll('.sect1').forEach(function(sect) {
       var tbody = sect.querySelector('tbody');
       if (!tbody) return;
@@ -613,6 +666,8 @@ SCRIPT = """\
   categories.forEach(function(cat) {
     document.getElementById('filter-' + cat).addEventListener('change', update);
   });
+  sourceCbs.forEach(function(cb) { cb.addEventListener('change', update); });
+  binaryCbs.forEach(function(cb) { cb.addEventListener('change', update); });
 
   function setAll(checked) {
     categories.forEach(function(cat) {
@@ -662,12 +717,24 @@ def process(html, non_vertxgen_types, jar_index):
 
     HIDDEN_BY_DEFAULT = {'type-specialization', 'mutiny-unwrap', 'upstream-removal', 'revapi-noise'}
 
+    def extract_classification(row):
+        source = binary = 'UNKNOWN'
+        m = re.search(r'Source:\s*(BREAKING|POTENTIALLY_BREAKING|NON_BREAKING)', row)
+        if m:
+            source = m.group(1)
+        m = re.search(r'Binary:\s*(BREAKING|POTENTIALLY_BREAKING|NON_BREAKING)', row)
+        if m:
+            binary = m.group(1)
+        return source, binary
+
     def tag_row(match):
         row = match.group(0)
         cat = categorize_row(row, non_vertxgen_types, jar_index, method_cache, vertxgen_cache)
         counts[cat] += 1
+        source, binary = extract_classification(row)
         hidden = ' style="display:none"' if cat in HIDDEN_BY_DEFAULT else ''
-        return row.replace('<tr>', '<tr data-category="' + cat + '"' + hidden + '>', 1)
+        attrs = f' data-category="{cat}" data-source="{source}" data-binary="{binary}"{hidden}'
+        return row.replace('<tr>', '<tr' + attrs + '>', 1)
 
     def process_tbody(match):
         tbody_content = match.group(0)
@@ -675,8 +742,8 @@ def process(html, non_vertxgen_types, jar_index):
 
     html = re.sub(r'<tbody>.*?</tbody>', process_tbody, html, flags=re.DOTALL)
 
+    html = html.replace('</head>', CUSTOM_CSS + '</head>', 1)
     html = html.replace('<div id="content">', '<div id="content">\n' + FILTER_PANEL, 1)
-
     html = html.replace('</body>', SCRIPT + '</body>', 1)
 
     return html, counts
